@@ -142,11 +142,26 @@ if ficheiro:
 
     styled_df = report_pivot.style.apply(color_by_group, axis=None).set_properties(**{'text-align': 'center', 'vertical-align': 'middle'})
     
+    st.info(
+    """
+    ℹ️ **Como interpretar os dados:**
     
+    - **Nº Pedidos de Reserva:** mostra a frequência com que um produto foi reservado.
+        - Ex. 2 Unidades reservadas no mesmo atendimento correspondem apenas a 1 Reserva  
+    - **Unidades Reservadas:** indica o volume total de caixas pedidas.
+        - Ex. 2 Unidades reservadas no mesmo atendimento correspondem a 2 unidades reservadas
+    
+    Um produto com **muitos pedidos mas poucas unidades** pode ter procura dispersa;  
+    já um produto com **poucos pedidos mas muitas unidades** pode estar associado a  
+    um número restrito de clientes de alto volume.
+    """
+)
 
     st.dataframe(styled_df, use_container_width=True)
 
 
 
 else:
-    st.info("Por favor, carregue um ficheiro Excel para visualizar os dados.")
+    st.header("Por favor, carregue o ficheiro de exportação das reservas para  visualizar os dados.")
+    
+    
