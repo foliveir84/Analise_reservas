@@ -1,134 +1,152 @@
 import streamlit as st
+
 import pandas as pd
 from datetime import datetime
 
+
+
+# Configurar página em wide mode
 st.set_page_config(layout="wide")
 
+# Título e descrição
+# Colocar logo e título lado a lado
+col_logo, col_title = st.columns([1, 5])
 
-st.title("Análise de Reservas")
+with col_logo:
+    st.markdown(
+        '<a href="https://pharmacoach.up.railway.app/about" target="_blank">'
+        '<img src="https://raw.githubusercontent.com/foliveir84/public_images/main/Logo_Pharmacoach.jpg" width="150"></a>',
+        unsafe_allow_html=True
+    )
 
-# 1. Upload do ficheiro
-ficheiro = st.file_uploader("Carregar o ficheiro de reservas", type=["xls", "xlsx"])
+with col_title:
+    st.title("💊 Reservas: Insights para Gestão de Portfólio e Stocks")
+    st.write("""
+Esta aplicação permite analisar todas as reservas efetuadas na farmácia, fornecendo indicadores que ajudam a otimizar a gestão do portfólio, os níveis de stock e a identificar oportunidades de melhoria.  
+Através da análise de dados históricos, é possível distinguir produtos com maior procura, ajustar stocks mínimos e maximizar a eficiência operacional.
+""")
 
-# 2. Número de meses a analisar
-n_meses_analisar = st.number_input(
-    "Número de meses a analisar", min_value=2, max_value=6, value=3, step=1
+# Créditos e Link do LinkedIn
+st.markdown(
+    """
+    <div style="text-align:right">
+        By <b>Filipe Oliveira</b>  
+        <a href="https://www.linkedin.com/in/foliveir/" target="_blank">
+            <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="20">
+        </a>
+    </div>
+    """,
+    unsafe_allow_html=True
 )
 
+# Vídeo tutorial sobre como exportar o ficheiro
+with st.expander("📹 Ver tutorial de exportação do ficheiro"):
+    st.video("https://www.youtube.com/embed/_qGgXx7HvUk")
+
+# Ficheiro de upload
+ficheiro = st.file_uploader("Carregar o ficheiro de reservas", type=["xls", ])
+
+# Período de Análise
+perido_analise = st.selectbox(
+    "Período de Análise",
+    options=[1, 2, 3, 4, 5, 6],
+    index=2,  # Valor padrão de 3 meses
+    help="Defina o intervalo de tempo para análise. O valor padrão é 3 meses para o passado, permitindo um olhar mais recente sobre os dados. Ajuste o período para uma visão mais ampla ou focada."
+)
+
+# Filtro Faturada
+filtro_faturada = st.selectbox(
+    "Filtrar por Faturada:",
+    options=["Todos", "Sim", "Não"],
+    index=0,
+    help="Permite focar apenas em reservas faturadas, não faturadas, ou visualizar todas."
+)
+
+# Processamento de dados
 if ficheiro:
-    # 3. Leitura do ficheiro
     df = pd.read_excel(ficheiro, skiprows=17)
     colunas_a_manter = ['Dt. Criação', 'CNP', 'Produto', 'Qtd. Res.', 'Faturada']
     df = df[colunas_a_manter]
     df['Dt. Criação'] = pd.to_datetime(df['Dt. Criação'])
-    
-    
-    # Novo filtro para Faturada
-    filtro_faturada = st.selectbox(
-        "Filtrar por Faturada:",
-        options=["Todos", "Sim", "Não"],
-        index=0
-    )
-    
-    
-    # Atualizar título com base no filtro
-    if filtro_faturada == "Todos":
-        st.subheader("Relatório: Todas as Reservas")
-    elif filtro_faturada == "Sim":
-        st.subheader("Relatório: Apenas Reservas Faturadas")
-    else:
-        st.subheader("Relatório: Apenas Reservas Não Faturadas")
-    
-    
-    
-    # Aplicar o Filtrp
+
+    # Aplicar filtro Faturada
     if filtro_faturada != "Todos":
         df = df[df['Faturada'] == filtro_faturada]
 
-    # 4. Agrupar reservas por data, CNP e produto
+    # Agrupar dados
     df_reservations = df.groupby(['Dt. Criação', 'CNP', 'Produto'])['Qtd. Res.'].sum().reset_index()
 
-    # 5. Filtrar últimos n meses
+    # Calcular a data de início para o filtro de meses
     today = datetime.now()
-    start_date = (today.replace(day=1) - pd.DateOffset(months=n_meses_analisar)).replace(day=1)
+    start_date = (today.replace(day=1) - pd.DateOffset(months=perido_analise)).replace(day=1)
     df_filtered = df_reservations[df_reservations['Dt. Criação'] >= start_date].copy()
 
-    # 6. Criar coluna AnoMes
     df_filtered['AnoMes'] = df_filtered['Dt. Criação'].dt.to_period('M')
 
-    # 7. Agregação mensal
     report_data = df_filtered.groupby(['CNP', 'Produto', 'AnoMes']).agg(
-        N_reservas=('Qtd. Res.', 'size'),
-        Total_reservado=('Qtd. Res.', 'sum'),
+        **{'Nº Pedidos de Reserva' : ('Qtd. Res.', 'size'),
+        'Unidades Reservadas' : ('Qtd. Res.', 'sum')},
     ).reset_index()
 
-    # 8. Criar tabela pivot
     report_pivot = report_data.pivot_table(
         index=['CNP', 'Produto'],
         columns='AnoMes',
-        values=['N_reservas', 'Total_reservado'],
+        values=['Nº Pedidos de Reserva', 'Unidades Reservadas'],
         aggfunc='sum',
         fill_value=0
     )
 
-    # 9. Ordenar meses
+    # Reordenar meses
     sorted_months = sorted(report_pivot.columns.levels[1])
     report_pivot = report_pivot.reindex(columns=sorted_months, level=1)
-
-    # 10. Renomear níveis
     report_pivot.columns = report_pivot.columns.set_names(['Métrica', 'Mês'])
 
-    # 11. Adicionar totais
-    report_pivot[('Total', 'N_reservas')] = report_pivot['N_reservas'].sum(axis=1)
-    report_pivot[('Total', 'Total_reservado')] = report_pivot['Total_reservado'].sum(axis=1)
+    # Cálculos totais
+    report_pivot[('Total', 'Nº Pedidos de Reserva')] = report_pivot['Nº Pedidos de Reserva'].sum(axis=1)
+    report_pivot[('Total', 'Unidades Reservadas')] = report_pivot['Unidades Reservadas'].sum(axis=1)
 
-    # 12. Determinar limites dinâmicos para slider
-    min_valor = int(report_pivot[('Total', 'N_reservas')].min())
-    max_valor = int(report_pivot[('Total', 'N_reservas')].max())
+    # Slider para filtrar reservas
+    min_valor = int(report_pivot[('Total', 'Nº Pedidos de Reserva')].min())
+    max_valor = int(report_pivot[('Total', 'Nº Pedidos de Reserva')].max())
 
-    # Garantir que há pelo menos um intervalo válido
     if min_valor == max_valor:
         max_valor = min_valor + 1
 
     valor_minimo, valor_maximo = st.slider(
-        "Intervalo de Total Reservado",
+        "Intervalo de Nº Pedidos de Reserva",
         min_value=min_valor,
         max_value=max_valor,
-        value=(min_valor, max_valor)
+        value=(min_valor, max_valor),
+        help="Filtra produtos por popularidade. Produtos com mais reservas tendem a ser críticos para a gestão de stock."
     )
 
-    # 13. Filtrar de acordo com o slider
     report_pivot = report_pivot[
-        (report_pivot[('Total', 'N_reservas')] >= valor_minimo) &
-        (report_pivot[('Total', 'N_reservas')] <= valor_maximo)
+        (report_pivot[('Total', 'Nº Pedidos de Reserva')] >= valor_minimo) &
+        (report_pivot[('Total', 'Nº Pedidos de Reserva')] <= valor_maximo)
     ]
 
-    
-    # 14. Ordenar pela coluna Total - N_reservas de forma descendente
-    report_pivot = report_pivot.sort_values(by=('Total', 'N_reservas'), ascending=False)
-    
-    
-    #Função para aplicar cores às colunas por grupo
+    report_pivot = report_pivot.sort_values(by=('Total', 'Nº Pedidos de Reserva'), ascending=False)
+
+    # Função para aplicar cores aos grupos de colunas
     def color_by_group(df):
         styles = pd.DataFrame('', index=df.index, columns=df.columns)
         for col in df.columns:
-            if col[0] == 'N_reservas':
-                styles[col] = 'background-color: rgba(206, 76, 143, 0.8);'  # rosa claro
-            elif col[0] == 'Total_reservado':
-                styles[col] = 'background-color: rgba(113, 185, 104, 0.8);'  # verde claro
+            if col[0] == 'Nº Pedidos de Reserva':
+                styles[col] = 'background-color: rgba(108, 28, 204, 0.9 ); color: #FFFFFF; font-weight: bold;text-align: center;'
+            elif col[0] == 'Unidades Reservadas':
+                styles[col] = 'background-color: rgba(86, 58, 217, 0.9 ); color: #FFFFFF; font-weight: bold;text-align: center;'
             elif col[0] == 'Total':
-                styles[col] = 'background-color: rgba(241, 196, 15, 0.15);'  # amarelo claro
+                styles[col] ='background-color: rgba(24, 0, 57, 0.9 ); color: #FFFFFF; font-weight: bold; text-align: center; '             
+            
         return styles
 
-    
-    # Aplicar o estilo
-    styled_df = report_pivot.style.apply(color_by_group, axis=None)
+    styled_df = report_pivot.style.apply(color_by_group, axis=None).set_properties(**{'text-align': 'center', 'vertical-align': 'middle'})
     
     
-    
-    
-    
-    # 15. Mostrar dataframe
+
     st.dataframe(styled_df, use_container_width=True)
+
+
+
 else:
     st.info("Por favor, carregue um ficheiro Excel para visualizar os dados.")
