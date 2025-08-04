@@ -48,11 +48,14 @@ ficheiro = st.file_uploader("Carregar o ficheiro de reservas", type=["xlsx","xls
 
 # Período de Análise
 perido_analise = st.selectbox(
-    "Período de Análise",
-    options=[1, 2, 3, 4, 5, 6],
+    "Número meses de Análise",
+    options=[ 2, 3, 4, 5, 6],
     index=2,  # Valor padrão de 3 meses
     help="Defina o intervalo de tempo para análise. O valor padrão é 3 meses para o passado, permitindo um olhar mais recente sobre os dados. Ajuste o período para uma visão mais ampla ou focada."
 )
+
+perido_analise -= 1
+
 
 # Filtro Faturada
 filtro_faturada = st.selectbox(
