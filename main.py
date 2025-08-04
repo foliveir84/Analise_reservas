@@ -44,7 +44,7 @@ with st.expander("📹 Ver tutorial de exportação do ficheiro"):
     st.video("https://www.youtube.com/embed/_qGgXx7HvUk")
 
 # Ficheiro de upload
-ficheiro = st.file_uploader("Carregar o ficheiro de reservas", type=["xls", ])
+ficheiro = st.file_uploader("Carregar o ficheiro de reservas", type=["xlsx", ])
 
 # Período de Análise
 perido_analise = st.selectbox(
