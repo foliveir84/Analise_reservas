@@ -88,8 +88,9 @@ if ficheiro:
             df = to_dataframe(records)
         except st.exceptions.StopException:
             raise
-        except ImportError:
-            st.error("pdfplumber não está instalado. Execute: pip install pdfplumber==0.11.4")
+        except ImportError as e:
+            missing = "pdfplumber" if "pdfplumber" in str(e) else ("pandas" if "pandas" in str(e) else str(e))
+            st.error(f"Dependência em falta ({missing}). Instale com: pip install {missing}")
             st.stop()
         except Exception as e:
             st.error(f"Erro ao processar o PDF: {e}")

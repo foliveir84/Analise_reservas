@@ -16,8 +16,6 @@ import csv
 import re
 from pathlib import Path
 
-import pandas as pd
-
 import pdfplumber
 
 # Limites x das colunas (em pontos PDF, derivados do cabeçalho).
@@ -180,6 +178,7 @@ def to_dataframe(records, fields=REQUESTED, header=REQUESTED_HEADER):
     consumidor, como já acontece no main.py) e Qtd. Res. como numérico
     (NaN onde não for possível converter).
     """
+    import pandas as pd
     if len(records) == 0:
         return pd.DataFrame(columns=header)
     df = pd.DataFrame([{h: r.get(f, "") for f, h in zip(fields, header)} for r in records])
