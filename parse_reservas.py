@@ -16,6 +16,8 @@ import csv
 import re
 from pathlib import Path
 
+import pandas as pd
+
 import pdfplumber
 
 # Limites x das colunas (em pontos PDF, derivados do cabeçalho).
@@ -166,6 +168,24 @@ def write_csv(records, path, fields, header):
         w.writerow(header)
         for r in records:
             w.writerow([r.get(fld, "") for fld in fields])
+
+
+def to_dataframe(records, fields=REQUESTED, header=REQUESTED_HEADER):
+    """Converte registos do parse_pdf num pandas.DataFrame com colunas legíveis.
+
+    fields : nomes internos das colunas a extrair (por defeito REQUESTED).
+    header : nomes legíveis a atribuir (por defeito REQUESTED_HEADER).
+
+    Devolve Dt. Criação como str (conversão para datetime fica a cargo do
+    consumidor, como já acontece no main.py) e Qtd. Res. como numérico
+    (NaN onde não for possível converter).
+    """
+    if len(records) == 0:
+        return pd.DataFrame(columns=header)
+    df = pd.DataFrame([{h: r.get(f, "") for f, h in zip(fields, header)} for r in records])
+    if "Qtd. Res." in df.columns:
+        df["Qtd. Res."] = pd.to_numeric(df["Qtd. Res."], errors="coerce")
+    return df
 
 
 def main(argv):
