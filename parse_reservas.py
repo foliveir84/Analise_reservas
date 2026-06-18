@@ -109,8 +109,15 @@ def clean(value, multiline=False):
     return re.sub(r"\s+", " ", value).strip()
 
 
-def parse_pdf(path):
-    """Lê o PDF e devolve lista de dicionários (um por registo)."""
+def parse_pdf(path, on_progress=None):
+    """Lê o PDF e devolve lista de dicionários (um por registo).
+
+    on_progress : callable opcional (pi, n_pages, n_records) -> bool|None.
+        Chamado após cada página processada. Se devolver False, o parsing
+        aborta e devolve os registos acumulados até ao momento.
+        Quando None, o progresso vai para sys.stderr a cada 10 páginas
+        (comportamento CLI).
+    """
     records = []
     with pdfplumber.open(path) as pdf:
         n_pages = len(pdf.pages)
@@ -154,7 +161,12 @@ def parse_pdf(path):
                         f"[aviso] pág {pi} registo {row.get('N_Reserva')}"
                         f" com campos em falta (CNP/Produto)\n")
                 records.append(row)
-            if pi % 10 == 0 or pi == n_pages:
+            # Feedback de progresso.
+            if on_progress is not None:
+                keep_going = on_progress(pi, n_pages, len(records))
+                if keep_going is False:
+                    break
+            elif pi % 10 == 0 or pi == n_pages:
                 sys.stderr.write(f"  processadas {pi}/{n_pages} páginas"
                                  f" ({len(records)} registos)\n")
     return records
