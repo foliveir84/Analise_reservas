@@ -76,31 +76,54 @@ if ficheiro:
         import tempfile
         from pathlib import Path
         from parse_reservas import parse_pdf, to_dataframe
-        tmp_path = None
-        try:
-            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-                tmp.write(ficheiro.getvalue())
-                tmp_path = Path(tmp.name)
-            records = parse_pdf(tmp_path)
-            if len(records) == 0:
-                st.error("Não foi possível extrair registos do PDF. Verifique que o ficheiro é uma exportação válida da LISTAGEM DE RESERVAS.")
+
+        file_bytes = ficheiro.getvalue()
+        file_hash = hash(file_bytes)
+
+        # Cache por sessão: se já processámos este ficheiro, reutilizar.
+        if (st.session_state.get("last_pdf_hash") == file_hash
+                and st.session_state.get("last_pdf_records") is not None):
+            records = st.session_state["last_pdf_records"]
+        else:
+            # Cache miss: mostrar barra de progresso e processar.
+            progress_bar = st.progress(0, text="A iniciar processamento do PDF...")
+            tmp_path = None
+            try:
+                with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                    tmp.write(file_bytes)
+                    tmp_path = Path(tmp.name)
+
+                def on_progress(pi, n_pages, n_records):
+                    progress_bar.progress(
+                        pi / n_pages if n_pages else 1.0,
+                        text=f"Página {pi}/{n_pages} ({n_records} registos)",
+                    )
+                    return True
+
+                records = parse_pdf(tmp_path, on_progress=on_progress)
+                if len(records) == 0:
+                    st.error("Não foi possível extrair registos do PDF. Verifique que o ficheiro é uma exportação válida da LISTAGEM DE RESERVAS.")
+                    st.stop()
+                # Gravar no cache só em sucesso (records não vazios).
+                st.session_state["last_pdf_hash"] = file_hash
+                st.session_state["last_pdf_records"] = records
+            except st.exceptions.StopException:
+                raise
+            except ImportError as e:
+                missing = "pdfplumber" if "pdfplumber" in str(e) else ("pandas" if "pandas" in str(e) else str(e))
+                st.error(f"Dependência em falta ({missing}). Instale com: pip install {missing}")
                 st.stop()
-            df = to_dataframe(records)
-        except st.exceptions.StopException:
-            raise
-        except ImportError as e:
-            missing = "pdfplumber" if "pdfplumber" in str(e) else ("pandas" if "pandas" in str(e) else str(e))
-            st.error(f"Dependência em falta ({missing}). Instale com: pip install {missing}")
-            st.stop()
-        except Exception as e:
-            st.error(f"Erro ao processar o PDF: {e}")
-            st.stop()
-        finally:
-            if tmp_path is not None and tmp_path.exists():
-                try:
-                    tmp_path.unlink()
-                except OSError:
-                    pass
+            except Exception as e:
+                st.error(f"Erro ao processar o PDF: {e}")
+                st.stop()
+            finally:
+                if tmp_path is not None and tmp_path.exists():
+                    try:
+                        tmp_path.unlink()
+                    except OSError:
+                        pass
+                progress_bar.empty()
+        df = to_dataframe(records)
     else:
         st.error("Tipo de ficheiro não suportado. Use .xlsx, .xls ou .pdf.")
         st.stop()
