@@ -88,12 +88,18 @@ if ficheiro:
             df = to_dataframe(records)
         except st.exceptions.StopException:
             raise
+        except ImportError:
+            st.error("pdfplumber não está instalado. Execute: pip install pdfplumber==0.11.4")
+            st.stop()
         except Exception as e:
             st.error(f"Erro ao processar o PDF: {e}")
             st.stop()
         finally:
             if tmp_path is not None and tmp_path.exists():
-                tmp_path.unlink()
+                try:
+                    tmp_path.unlink()
+                except OSError:
+                    pass
     else:
         st.error("Tipo de ficheiro não suportado. Use .xlsx, .xls ou .pdf.")
         st.stop()
