@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Streamlit
+.streamlit/
+
+# Temp/CSV outputs from parser CLI
+reservas.csv
+reservas_full.csv
+_tmp_reservas*.csv
+
+# OS
+Thumbs.db
+.DS_Store
