@@ -143,8 +143,8 @@ def parse_pdf(path):
                 if not row["N_Reserva"]:
                     row["N_Reserva"] = anchor["text"]
                 # Normalização por coluna.
-                row["Dt_Criacao"] = clean(row["Dt_Criacao"], multiline=True)
-                row["Dt_Alteracao"] = clean(row["Dt_Alteracao"], multiline=True)
+                row["Dt_Criacao"] = clean(row["Dt_Criacao"])
+                row["Dt_Alteracao"] = clean(row["Dt_Alteracao"])
                 row["Produto"] = clean(row["Produto"])
                 row["Cliente"] = clean(row["Cliente"])
                 row["Operador"] = clean(row["Operador"])

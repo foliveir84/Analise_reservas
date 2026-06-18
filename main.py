@@ -104,7 +104,7 @@ if ficheiro:
     else:
         st.error("Tipo de ficheiro não suportado. Use .xlsx, .xls ou .pdf.")
         st.stop()
-    df['Dt. Criação'] = pd.to_datetime(df['Dt. Criação'])
+    df['Dt. Criação'] = pd.to_datetime(df['Dt. Criação'], dayfirst=True)
 
     # Aplicar filtro Faturada
     if filtro_faturada != "Todos":
