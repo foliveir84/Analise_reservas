@@ -44,7 +44,7 @@ with st.expander("📹 Ver tutorial de exportação do ficheiro"):
     st.video("https://www.youtube.com/embed/_qGgXx7HvUk")
 
 # Ficheiro de upload
-ficheiro = st.file_uploader("Carregar o ficheiro de reservas", type=["xlsx","xls"])
+ficheiro = st.file_uploader("Carregar o ficheiro de reservas", type=["xlsx","xls","pdf"])
 
 # Período de Análise
 perido_analise = st.selectbox(
@@ -67,9 +67,36 @@ filtro_faturada = st.selectbox(
 
 # Processamento de dados
 if ficheiro:
-    df = pd.read_excel(ficheiro, skiprows=17)
     colunas_a_manter = ['Dt. Criação', 'CNP', 'Produto', 'Qtd. Res.', 'Faturada']
-    df = df[colunas_a_manter]
+    nome = ficheiro.name.lower()
+    if nome.endswith((".xlsx", ".xls")):
+        df = pd.read_excel(ficheiro, skiprows=17)
+        df = df[colunas_a_manter]
+    elif nome.endswith(".pdf"):
+        import tempfile
+        from pathlib import Path
+        from parse_reservas import parse_pdf, to_dataframe
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                tmp.write(ficheiro.getvalue())
+                tmp_path = Path(tmp.name)
+            records = parse_pdf(tmp_path)
+            if len(records) == 0:
+                st.error("Não foi possível extrair registos do PDF. Verifique que o ficheiro é uma exportação válida da LISTAGEM DE RESERVAS.")
+                st.stop()
+            df = to_dataframe(records)
+        except st.exceptions.StopException:
+            raise
+        except Exception as e:
+            st.error(f"Erro ao processar o PDF: {e}")
+            st.stop()
+        finally:
+            if tmp_path is not None and tmp_path.exists():
+                tmp_path.unlink()
+    else:
+        st.error("Tipo de ficheiro não suportado. Use .xlsx, .xls ou .pdf.")
+        st.stop()
     df['Dt. Criação'] = pd.to_datetime(df['Dt. Criação'])
 
     # Aplicar filtro Faturada
