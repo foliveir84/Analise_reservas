@@ -107,8 +107,6 @@ if ficheiro:
                 # Gravar no cache só em sucesso (records não vazios).
                 st.session_state["last_pdf_hash"] = file_hash
                 st.session_state["last_pdf_records"] = records
-            except st.exceptions.StopException:
-                raise
             except ImportError as e:
                 missing = "pdfplumber" if "pdfplumber" in str(e) else ("pandas" if "pandas" in str(e) else str(e))
                 st.error(f"Dependência em falta ({missing}). Instale com: pip install {missing}")
